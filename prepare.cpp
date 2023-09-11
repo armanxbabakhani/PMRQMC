@@ -23,7 +23,7 @@ using namespace std;
 
 int no_qubit = 0; // number of qubits is a global variable!
 
-// *****************************    Functions ******************************************* //
+// *****************************    Functions  ******************************************* //
 template<typename T>
 void printMatrix(const vector<vector<T>>& matrix) {
     int m = matrix.size();
@@ -37,6 +37,31 @@ void printMatrix(const vector<vector<T>>& matrix) {
     }
 }
 
+
+// ---------------------- Mod p Linear Algebra functions --------------------------- //
+
+vector<vector<int>> Modp_mult(const vector<vector<int>> A , const vector<vector<int>> B , int p){
+    int rowsA = A.size(), colsA = A[0].size() , rowsB = B.size(), colsB = B[0].size();
+
+    if (colsA != rowsB) {
+        cerr << "Matrices are not compatible for multiplication." << std::endl;
+        return {};
+    }
+
+    vector<vector<int>> AB(rowsA, vector<int>(colsB, 0));
+    
+    // Perform element-wise multiplication and summation
+    for (int i = 0; i < rowsA; ++i) {
+        for (int j = 0; j < colsB; ++j) {
+            for (int k = 0; k < colsA; ++k) {
+                AB[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+
+    return AB;
+
+}
 // This function is for binary addition (XOR)
 vector<int> GF2_add(vector<int> vec1 , vector<int> vec2){
     vector<int> result;
@@ -50,6 +75,12 @@ vector<int> GF2_add(vector<int> vec1 , vector<int> vec2){
     return result;
 }
 
+// Add a fininte field generic multiplication:
+// To generalize add a template to take in the type of output (currently set to <int>)
+// This is matrix multiplication modulo p
+vector<vector<int>> fgemm(vector<vector<int>> A , vector<vector<int>> B , int p){
+
+}
 // Function to compute the mod 2 nullspace
 vector<vector<int>> Null2(const vector<vector<int>>& matrix) {
     vector<vector<int>> nullspaceBasis;
