@@ -23,6 +23,7 @@ void Print_matrix(const vector<vector<T>>& matrix) {
     }
 }
 
+// This function mod p multiplies the matrix A by a scalar c!
 vector<vector<int>> Modp_scalmult(const int c , const vector<vector<int>> A , int p){
     int rowsA = A.size() , colsA = A[0].size();
     vector<vector<int>> cA(rowsA , vector<int> (colsA , 0));
@@ -34,11 +35,12 @@ vector<vector<int>> Modp_scalmult(const int c , const vector<vector<int>> A , in
             else{
                 cA[i][j] = (p + (c*A[i][j] % p)) % p;
             }
-            //cA[i][j] = c*A[i][j];
         }
     }
     return cA;
 }
+
+// This function computes matrix multiplication of A and b mod p.
 vector<vector<int>> Modp_mult(const vector<vector<int>> A , const vector<vector<int>> B , int p){
     int rowsA = A.size(), colsA = A[0].size() , rowsB = B.size(), colsB = B[0].size();
 
@@ -62,6 +64,7 @@ vector<vector<int>> Modp_mult(const vector<vector<int>> A , const vector<vector<
     return AB;
 }
 
+// This function divides num by divider (mod p)
 int Modp_divide(int num , int divider , int p){
     int answer;
     for (int i = 0; i < p; i++){
@@ -71,7 +74,8 @@ int Modp_divide(int num , int divider , int p){
     }
     return answer;
 }
-// This function transposes the vector of vectors
+
+// This function transposes matrix A
 vector<vector<int>> Transpose(vector<vector<int>> A){
     vector<vector<int>> A_transpose;
     int rowsA = A.size(), colsA = A[0].size();
@@ -165,6 +169,8 @@ vector<vector<vector<int>>> Divide_blocks_lower(const vector<vector<int>> A , in
 
     return BlockMatrix;
 }
+
+// This function vertically concatenates to matrices X1 and X2
 vector<vector<int>> Vert_conc(vector<vector<int>> X1 , vector<vector<int>> X2){
     vector<vector<int>> X = X1;
     for(int i = 0; i < X2.size(); i++){
@@ -173,6 +179,7 @@ vector<vector<int>> Vert_conc(vector<vector<int>> X1 , vector<vector<int>> X2){
     return X;
 }
 
+// This function horizontally concatenates matrices X1 and X2
 vector<vector<int>> Horz_conc(vector<vector<int>> X1 , vector<vector<int>> X2){
     vector<vector<int>> X = X1;
     if(X1.size() == 0){
@@ -326,23 +333,6 @@ vector<pair<int , int>> Prime_decomp(int n){
     return primes;
 }
 
-// Modular Matrix solvers:
-/*vector<vector<int>> Trsm(vector<vector<int>> A , vector<vector<int>> , int p){
-    int m = A.size() , n = A[0].size();
-    if(m == 1){
-        return Modp_divide(B, A[0][0] , p);
-    }
-    else{
-        int mdiv = m/2;
-        vector<vector<vector<int>>> Adiv = Divide_blocks(A , mdiv) , Bdiv = Divide_vector(B , mdiv);
-        vector<vector<int>> A1 = Adiv[0] , A2 = Adiv[1] , A3 = Adiv[2] , B1 = Bdiv[0] , B2 = Bdiv[1];
-        vector<vector<int>> X2 = Trsm(A3 , B2 , p);
-        B1 = Vec_sub(B1 , Modp_mult( A2 , X2 , p ));
-        X1 = Trsm(A1 , B1 , p);
-        return Vert_conc(X1 , X2);
-    }
-}*/
-
 // Nullspace for finite fields (mod p, where p is a prime)!
 vector<vector<int>> Modp_Nullspace(vector<vector<int>> A , int p){
     Modp_GE(A , p);
@@ -397,6 +387,7 @@ vector<vector<int>> Modp_solver(vector<vector<int>> A , vector<vector<int>> b , 
     return x_final;
 }
 
+// This function computes nullspace basis of A mod p^r! when r = 1, it simply makes a single call to Modp_Nullspace(A , p)
 vector<vector<int>> Modp_Nullspace_r(vector<vector<int>> A , int p , int r){
     if(r == 1){
         return Modp_Nullspace(A , p);
@@ -419,7 +410,7 @@ vector<vector<int>> Modp_Nullspace_r(vector<vector<int>> A , int p , int r){
 }
 
 
-// Mod n nullspace where n is any integer!
+// This function computes the mod n nullspace basis of A, where n is any integer!
 vector<vector<int>> Nullspace_n(const vector<vector<int>> A , int n){
     vector<pair<int, int>> ps = Prime_decomp(n);
     vector<vector<int>> Null;
@@ -435,24 +426,23 @@ vector<vector<int>> Nullspace_n(const vector<vector<int>> A , int n){
     return Null;
 }
 
-// Function to find the nullspace modulo p of the matrix
-
 int main(){
-
-    // Testing PLE:
-    vector<vector<int>> A1 = Transpose({{1 , 1 , 0 , 0 , 0} , {0 , 1 , 1 , 0 , 0} , {1 , 0, 1 , 0 , 0} , {0 , 1 , 0 , 1 , 0} , {0 , 0 , 1 , 0 , 1} , {0 , 1 , 0 , 0 , 1} , {0 , 0 , 1 , 1 , 0}});
-    //vector<vector<int>> A2 = Transpose({{1 , 2 , 3 , 0 , 0} , {3 , 2 , 1 , 0 , 0} , {2 , 0, 1 , 0 , 0} , {0 , 2 , 0 , 1 , 0} , {0 , 1 , 0 , 2 , 0} , {0, 3, 0, 1, 0} , {0,1,0,2,0} , {1,2,2,0,0}});
-    vector<vector<int>> A2 = Transpose({{1 , 3 , 4 , 0 , 0} , {4 , 3 , 1 , 0 , 0} , {1 , 0, 1 , 0 , 0}});
-    vector<vector<int>> A = Transpose({{1 , 2 , 1} , {2 , 1 , 0} , {0 , 2  , 1} , {1 , 0 , 1}}) , Arr;
-    vector<vector<int>> b = Transpose({{2, 2, 1}});
+    // Testing Nullspace finder!
+    vector<vector<int>> A = Transpose({{1 , 2 , 1} , {2 , 1 , 0} , {0 , 2  , 1} , {1 , 0 , 1}}), Arr;
     
+    Arr = A;
     int p = 7;
+    Modp_GE(Arr , p); // Gaussian Elimination performed on A!
     cout << "A is " << endl;
     Print_matrix(A);
+    cout << endl;
+
+    cout << "A in row echelon form " << endl;
+    Print_matrix(Arr);
 
     cout << endl;
     vector<vector<int>> x = Nullspace_n(A , p);
-    cout << "Finally, the nullspace: " << endl;
+    cout << "The nullspace basis of A " << endl;
     Print_matrix(x);
 
     return 0;
