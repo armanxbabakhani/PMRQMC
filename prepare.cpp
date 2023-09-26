@@ -75,12 +75,6 @@ vector<int> GF2_add(vector<int> vec1 , vector<int> vec2){
     return result;
 }
 
-// Add a fininte field generic multiplication:
-// To generalize add a template to take in the type of output (currently set to <int>)
-// This is matrix multiplication modulo p
-vector<vector<int>> fgemm(vector<vector<int>> A , vector<vector<int>> B , int p){
-
-}
 // Function to compute the mod 2 nullspace
 vector<vector<int>> Null2(const vector<vector<int>>& matrix) {
     vector<vector<int>> nullspaceBasis;
