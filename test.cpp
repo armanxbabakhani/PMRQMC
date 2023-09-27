@@ -183,35 +183,41 @@ void Diag_Multiply(vector<vector<Diag>>& ExistingDiags , vector<complex<double>>
 
 void PMR_otimes(vector<vector<pair<int,int>>>& PermutationSet , DVecs& DiagonalSet , Coeffs& CoeffSet , vector<int> NewPermutations , DVecs NewDiagonals, Coeffs NewCoeffs, int NewParticleNo , int twoSplusOne){
     vector<vector<pair<int, int>>> PermutationSet0 = PermutationSet;
+    DVecs DiagonalSet0 = DiagonalSet;
+    Coeffs CoeffSet0 = CoeffSet;
     int len = PermutationSet.size();
+    PermutationSet.clear();
+    DiagonalSet.clear();
+    CoeffSet.clear();
+
     for(int j=0; j < NewPermutations.size(); j++){
         vector<vector<pair<int, int>>> PermutationSetj = PermutationSet0;
+        DVecs DiagonalSetk = DiagonalSet0;
+        Coeffs CoeffSetj = CoeffSet0;
         for(int k=0; k < len; k++){
             // Maybe: Check for uniqueness here OR do it during the concatenation of two consecutive lines!
-            PermutationSetj[k].push_back({NewParticleNo , NewPermutations[j]});
-            Diag_Multiply(DiagonalSet[k] , CoeffSet[k] , NewDiagonals[j] , NewCoeffs[j]); // Here DiagonalSet and CoeffSet are appended by the New Diagonal terms!
+            PermutationSetj[k].push_back({NewParticleNo , NewPermutations[j]}); // Here, we are multiplying the permutation matrices
+            Diag_Multiply(DiagonalSetj[k] , CoeffSetj[k] , NewDiagonals[j] , NewCoeffs[j]); // Here, we are multiplying the diagonal matrices with corresponding coefficients!
         }
-        // Multiply the corresponding Diagonals and coefficients.
-        // Then vertically concatenate PermutationSet with PermutationSetj and the corresponding Diagonals and Coefficients.
-
+        PermutationSet.insert(PermutationSet.end() , PermutationSetj.begin() , PermutationSet.end());
+        DiagonalSet.insert(DiagonalSet.end() , DiagonalSetj.begin() , DiagonalSet.end());
+        CoeffSet.insert(CoeffSet.end() , CoeffSetj.begin() , CoeffSet.end());
     }
 } 
 
 struct PDdata {
     vector<vector<int>> Permutations;
-    Coeffs coeffs;
-    // ZVecs Dtrack;
-    DVecs DMatrices;
+    DVecs Diagonals;
+    Coeffs Coefficients;
 };
 
 PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>>& data) {
-    PDdata pdData;
     int NumLines = data.size();
     extern int NumOfParticles;
-    vector<pair<vector<int>,vector<int>>> PMatrices;  // The first in the pair is the set of particle numbers and the second vector is the set of powers of permutations
-    Coeffs Coefficients;
-    //ZVecs Dtrack;
+    vector<vector<pair<int , int>>> PMatrices;  // The first in the pair is the set of particle numbers and the second vector is the set of powers of permutations
     DVecs DMatrices; //This vector maps the Zs to Ps it is a many to one mapping!
+    Coeffs Cs;
+    PDdata pdData;
 
     // Definining the diagonal matrices and their complex coefficients
     complex<double> one(1,0) , plusi(0,1) , minusi(0,1);
@@ -264,10 +270,24 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>>& data) {
                 }
             }
         }
-
-
-
+        // Combining all the P and D matrices from a single line into corresponding PRM forms (there could be multiple PMR terms from each line)
+        for(int k = 0; k < Permsl.size(); k++){
+            if(k == 0){
+                for(int kk = 0; kk < Permsl[k].size(); kk++){
+                    PMatrices.push_back({(ParticlNos[k] , Permsl[k][kk])});
+                    DMatrices.push_back(Diagsl[k][kk]);
+                    Cs.push_back(Coeffsl[k][kk]);
+                }
+            }
+            else{
+                PMR_otimes(PMatrices , DMatrices , Cs , Permsl[k] , Diagsl[k] , Coeffsl[k] , ParticlNos[k]);
+            }
+        }
     }
+
+    pdData.Permutations = PMatrices;
+    pdData.Diagonals = DMatrices;
+    pdData.Coefficients = Cs;
 
     return pdData;
 }
