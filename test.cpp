@@ -58,9 +58,13 @@ void Print_diagonals(vector<vector<Diag>> Diags , vector<complex<double>> Cs){
     cout << endl;
 }
 
-void Print_data(vector<vector<complex<double>>> C , vector<vector<vector<Diag>>> D , vector<int> P){
+void Print_data(Coeffs C , DVecs D , vector<vector<pair<int, int>>> P){
     for(int i = 0; i < P.size() ; i++){
-        cout << "Permutation index: " << P[i] << endl;
+        cout << "The permutation is ";
+        for(int l = 0; l < P[i].size(); l++){
+            cout << "< spin # " << P[i][l].first << " , P^" << P[i][l].second << " > ";
+        }
+        cout << endl;
         for(int j = 0; j < D[i].size(); j++){
             cout <<  C[i][j];
             for(int k = 0; k < D[i][j].size() ; k++){
@@ -80,6 +84,48 @@ void Print_data(vector<vector<complex<double>>> C , vector<vector<vector<Diag>>>
         }
         cout << endl;
     }
+}
+
+vector<pair<complex<double>, vector<int>>> data_extract(const string& fileName){
+    vector<pair<complex<double>, vector<int>>> data;
+
+    ifstream inputFile(fileName);
+    if (!inputFile) {
+        cout << "Failed to open the input file!" << endl;
+        return data;
+    }
+
+    string line;
+    while (getline(inputFile, line)) {
+        // The first non-empty element is the coefficient
+        istringstream iss(line);
+        pair<complex<double>,vector<int>> linedata;
+
+        // Extracting the complex coefficient:
+        double realpart, imagpart=0;
+        char sign;
+        string complexPart;
+        iss >> complexPart; 
+
+        istringstream complexIss(complexPart);
+        complexIss >> realpart >> imagpart;
+        linedata.first = complex<double> (realpart , imagpart);
+
+        //Extracting the integer vectors of qubits and paulis:
+        string token;
+        vector<int> integers;
+        while (iss >> token){
+            // int num = std::stoi(token);
+            int num = token == "X" || token == "x" ? 1 : 
+                      token == "Y" || token == "y" ? 2 : 
+                      token == "Z" || token == "z" ? 3 : std::stoi(token);
+            integers.push_back(num);
+        }
+        linedata.second = integers;
+        data.push_back(linedata);
+        }
+        inputFile.close();
+    return data;
 }
 
 // This function finds an instance of an integer in a vector of integers!
@@ -192,31 +238,69 @@ void PMR_otimes(vector<vector<pair<int,int>>>& PermutationSet , DVecs& DiagonalS
 
     for(int j=0; j < NewPermutations.size(); j++){
         vector<vector<pair<int, int>>> PermutationSetj = PermutationSet0;
-        DVecs DiagonalSetk = DiagonalSet0;
+        DVecs DiagonalSetj = DiagonalSet0;
         Coeffs CoeffSetj = CoeffSet0;
         for(int k=0; k < len; k++){
             // Maybe: Check for uniqueness here OR do it during the concatenation of two consecutive lines!
             PermutationSetj[k].push_back({NewParticleNo , NewPermutations[j]}); // Here, we are multiplying the permutation matrices
             Diag_Multiply(DiagonalSetj[k] , CoeffSetj[k] , NewDiagonals[j] , NewCoeffs[j]); // Here, we are multiplying the diagonal matrices with corresponding coefficients!
         }
-        PermutationSet.insert(PermutationSet.end() , PermutationSetj.begin() , PermutationSet.end());
-        DiagonalSet.insert(DiagonalSet.end() , DiagonalSetj.begin() , DiagonalSet.end());
-        CoeffSet.insert(CoeffSet.end() , CoeffSetj.begin() , CoeffSet.end());
+        PermutationSet.insert(PermutationSet.end() , PermutationSetj.begin() , PermutationSetj.end());
+        DiagonalSet.insert(DiagonalSet.end() , DiagonalSetj.begin() , DiagonalSetj.end());
+        CoeffSet.insert(CoeffSet.end() , CoeffSetj.begin() , CoeffSetj.end());
     }
 } 
 
 struct PDdata {
-    vector<vector<int>> Permutations;
+    vector<vector<pair<int, int>>> Permutations;
     DVecs Diagonals;
     Coeffs Coefficients;
 };
 
-PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>>& data) {
+bool Perm_compare(vector<pair<int,int>> A , vector<pair<int,int>> B){
+    if(A.size() != B.size())
+        cerr << "The sizes of the two input vectors are not equal! Comparison failed." << endl;
+    for(int i = 0; i < A.size(); i++){
+        if(A[i] != B[i]){
+            return false;
+        }
+    }
+    return true;
+}
+
+pair<bool , int> Find_permutation(vector<pair<int,int>> LinePerms , vector<vector<pair<int,int>>> AllPerms){
+    for(int i=0; i<AllPerms.size(); i++){
+        if(Perm_compare(LinePerms , AllPerms[i])){
+            return {true, i};
+        }
+    }
+    return {0,0};
+}
+void PMR_append(PDdata& pdData, PDdata pdDataLine){
+    vector<vector<pair<int,int>>> AllPerms = pdData.Permutations , LinePerms = pdDataLine.Permutations;
+    DVecs AllDiags = pdData.Diagonals , LineDiags = pdDataLine.Diagonals;
+    Coeffs AllCoes = pdData.Coefficients , LineCoes = pdDataLine.Coefficients;
+
+    for(int i=0; i < LinePerms.size(); i++){
+        pair<bool , int> PermFound = Find_permutation(LinePerms[i] , AllPerms);
+        if(PermFound.first){
+            AllDiags[PermFound.second].insert(AllDiags[PermFound.second].end() , LineDiags[i].begin() , LineDiags[i].end());
+            AllCoes[PermFound.second].insert(AllCoes[PermFound.second].end() , LineCoes[i].begin() , LineCoes[i].end());
+        }
+        else{
+            AllPerms.push_back(LinePerms[i]);
+            AllDiags.push_back(LineDiags[i]);
+            AllCoes.push_back(LineCoes[i]);
+        }
+    }
+    pdData.Permutations = AllPerms;
+    pdData.Coefficients = AllCoes;
+    pdData.Diagonals = AllDiags;
+}
+
+PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
     int NumLines = data.size();
     extern int NumOfParticles;
-    vector<vector<pair<int , int>>> PMatrices;  // The first in the pair is the set of particle numbers and the second vector is the set of powers of permutations
-    DVecs DMatrices; //This vector maps the Zs to Ps it is a many to one mapping!
-    Coeffs Cs;
     PDdata pdData;
 
     // Definining the diagonal matrices and their complex coefficients
@@ -233,19 +317,25 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>>& data) {
         vector<DVecs> Diagsl; // The first vector is for each particle, the second vector is for the set of permutations, and the third vector is for the set of diagonal vectors for the specified permutation
         vector<Coeffs> Coeffsl; // Since we can get multiple permutation matrices per line of data, we need to keep track of the coefficients for each 
 
-        for (size_t i = 0; i < datal.size() / 4; i++) {
+        vector<vector<pair<int , int>>> PMatricesLine;  // The first in the pair is the set of particle numbers and the second vector is the set of powers of permutations
+        DVecs DMatricesLine; //This vector maps the Zs to Ps it is a many to one mapping!
+        Coeffs CsLine;
+        PDdata pdDataLine;
+
+        int twoSpinplus1l; 
+        for (size_t i = 0; i < datal.size()/4; i++) {
             int Particlei = datal[4 * i] , Pauli = datal[4 * i + 1] , Poweri = datal[4 * i + 2] , twoSpinPlusOnei = datal[4 * i + 3];
+            twoSpinplus1l = twoSpinPlusOnei; // Assuming only a single spin species for now. In future, if there are multiple spin species, additional matrices should be created to separate these permutation operators!
             if (Particlei > NumOfParticles)
                 NumOfParticles = Particlei;
             PauliCDPs Operator;
             if (Pauli == 1){
-                Operator = {{1 , twoSpinPlusOnei - 1} , {{Dplus , Dminus} , {one , one}}};  // Operator = X!
+                Operator = {{1 , twoSpinPlusOnei - 1} , {{Dplus , Dminus} , {one , one}}};  // Operator = S_x!
             } else if (Pauli == 2){
-                Operator = {{1 , twoSpinPlusOnei - 1} , {{Dplus , Dminus} , {minusi , plusi}}}; // Operator = Y!
+                Operator = {{1 , twoSpinPlusOnei - 1} , {{Dplus , Dminus} , {minusi , plusi}}}; // Operator = S_y!
             } else if (Pauli == 3){
-                Operator = {{0} , {{Dz} , {one}}}; // Operator = Z!
+                Operator = {{0} , {{Dz} , {one}}}; // Operator = S_z!
             }
-
             pair<bool, int> PartFound = Find_number(Particlei , ParticlNos);
             if(PartFound.first){
                 while(Poweri > 0){
@@ -260,7 +350,7 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>>& data) {
                 Coeffs NewC;
                 for(int p = 0; p < Operator.second.first.size() ; p++){
                     NewD.push_back({{Operator.second.first[p]}});
-                    NewC.push_back({{Operator.second.second[p]}});
+                    NewC.push_back({{Operator.second.second[p]}}); // This takes care of the front coefficient multiplication!
                 }
                 Diagsl.push_back(NewD);
                 Coeffsl.push_back(NewC);
@@ -274,38 +364,64 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>>& data) {
         for(int k = 0; k < Permsl.size(); k++){
             if(k == 0){
                 for(int kk = 0; kk < Permsl[k].size(); kk++){
-                    PMatrices.push_back({(ParticlNos[k] , Permsl[k][kk])});
-                    DMatrices.push_back(Diagsl[k][kk]);
-                    Cs.push_back(Coeffsl[k][kk]);
+                    PMatricesLine.push_back({{ParticlNos[k] , Permsl[k][kk]}});
+                    DMatricesLine.push_back(Diagsl[k][kk]);
+                    CsLine.push_back(Coeffsl[k][kk]);
                 }
             }
             else{
-                PMR_otimes(PMatrices , DMatrices , Cs , Permsl[k] , Diagsl[k] , Coeffsl[k] , ParticlNos[k]);
+                PMR_otimes(PMatricesLine , DMatricesLine , CsLine , Permsl[k] , Diagsl[k] , Coeffsl[k] , ParticlNos[k] , twoSpinplus1l);
             }
         }
-    }
+        // Multiply all coefficients by the coefficient at front:
+        for(int c = 0; c < CsLine.size(); c++){
+            for(int cc = 0; cc < CsLine[c].size(); cc++){
+                CsLine[c][cc] = CsLine[c][cc]*coeffl;
+            }
+        }
 
-    pdData.Permutations = PMatrices;
-    pdData.Diagonals = DMatrices;
-    pdData.Coefficients = Cs;
+        // Adding the new CDP from the line to the entire set of total CDPs
+        pdDataLine.Coefficients = CsLine;
+        pdDataLine.Permutations = PMatricesLine;
+        pdDataLine.Diagonals = DMatricesLine;
+
+        PMR_append(pdData, pdDataLine);
+    }
 
     return pdData;
 }
 
+vector<vector<int>> Convert_perms(vector<vector<pair<int,int>>> PMatrices){
+    extern int NumOfParticles;
+    vector<vector<int>> ColPermMatrix(NumOfParticles , vector<int>(PMatrices.size() , 0));
+    for(int i=0; i< PMatrices.size(); i++){
+        for(int j = 0; j < PMatrices[i].size(); j++){
+            int particle = PMatrices[i][j].first , power = PMatrices[i][j].second;
+            ColPermMatrix[particle-1][i] = power;
+        }
+    }
+    return ColPermMatrix;
+}
 
-int main(){
-    int twosp1 = 3;
-    Diag Dplus = {0 , 0} , Dminus = {0 , -1} , Dz = {1 , 0}; 
-    complex<double> one(1.0 , 0.0) , plusi(0.0 , 1.0) , minusi(0.0 , -1.0);
-    PauliCDPs X = {{1 , twosp1 - 1} , {{Dplus , Dminus} , {one , one}}} , Y = {{1 , twosp1 - 1} , {{Dplus , Dminus} , {minusi , plusi}}} , Z = {{0} , {{Dz} , {one}}};
-    vector<int> P = {1 , 2 , 0};
-    vector<vector<vector<Diag>>> D = {{{Dplus}} , {{Dminus}} , {{Dz} , {Dminus , Dplus}}};
-    vector<vector<complex<double>>> C = {{plusi} , {minusi} , {one , one}};
 
-    cout << "The data before multiplication" << endl;
-    Print_data(C , D , P);
+int main(int argc , char* argv[]){
+    string fileName(argv[1]);  // Reading the name of the input .txt file describing the Hamiltonian
+    vector<pair<complex<double>, vector<int>>> data = data_extract(fileName);
+    cout << "Now processing ... " << endl;
+    cout << endl;
+    PDdata CDPdata = CDPconvert(data);
+    Coeffs Cs = CDPdata.Coefficients;
+    DVecs DMatrices = CDPdata.Diagonals;
+    vector< vector<pair<int,int>>> PMatrices = CDPdata.Permutations;
 
-    Permutation_append(P , D , C , X , twosp1);
+    cout << "The following is the breakdown of the data " << endl;
+    Print_data(Cs , DMatrices , PMatrices);
+
+    // Converting the PMatrices into vector<vector<int>> to make matrix of column permutations
+
+    vector<vector<int>> PermMatrixColumn = Convert_perms(PMatrices);
+    cout << endl;
+    printMatrix(PermMatrixColumn);
 
     return 0;
 }
