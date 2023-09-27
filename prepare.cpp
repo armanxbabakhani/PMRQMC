@@ -25,7 +25,7 @@ int no_qubit = 0; // number of qubits is a global variable!
 
 // *****************************    Functions  ******************************************* //
 template<typename T>
-void printMatrix(const vector<vector<T>>& matrix) {
+void printMatrix(const vector<vector<T>> matrix) {
     int m = matrix.size();
     int n = matrix[0].size();
 
