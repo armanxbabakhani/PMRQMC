@@ -16,11 +16,10 @@ typedef vector<vector<int>> ZVecs;
 typedef pair<int , int> Diag; // A diagonal matrix is specified by two numbers z and k!
 typedef vector<vector<vector<Diag>>> DVecs;
 typedef pair<vector<int> , pair<vector<Diag> , vector<complex<double>>>> PauliCDPs; // This typedef is to summarize the Paulis as sum of DPs (with corresponding coefficients);
-struct PZData {
-    vector<vector<int>> Ps;
-    Coeffs coeffs;
-    // ZVecs Dtrack;
-    DVecs DMatrices;
+struct PDdata {
+    vector<vector<pair<int, int>>> Permutations;
+    DVecs Diagonals;
+    Coeffs Coefficients;
 };
 
 template<typename T>
@@ -57,7 +56,11 @@ void Print_diagonals(vector<vector<Diag>> Diags , vector<complex<double>> Cs){
     cout << endl;
 }
 
-void Print_data(Coeffs C , DVecs D , vector<vector<pair<int, int>>> P){
+void Print_data(PDdata CDPdata){
+    Coeffs C = CDPdata.Coefficients;
+    DVecs D = CDPdata.Diagonals;
+    vector<vector<pair<int,int>>> P = CDPdata.Permutations;
+
     for(int i = 0; i < P.size() ; i++){
         cout << "The permutation is ";
         for(int l = 0; l < P[i].size(); l++){
@@ -250,12 +253,6 @@ void PMR_otimes(vector<vector<pair<int,int>>>& PermutationSet , DVecs& DiagonalS
     }
 } 
 
-struct PDdata {
-    vector<vector<pair<int, int>>> Permutations;
-    DVecs Diagonals;
-    Coeffs Coefficients;
-};
-
 bool Perm_compare(vector<pair<int,int>> A , vector<pair<int,int>> B){
     if(A.size() != B.size())
         cerr << "The sizes of the two input vectors are not equal! Comparison failed." << endl;
@@ -414,7 +411,7 @@ int main(int argc , char* argv[]){
     vector< vector<pair<int,int>>> PMatrices = CDPdata.Permutations;
 
     cout << "The following is the breakdown of the data " << endl;
-    Print_data(Cs , DMatrices , PMatrices);
+    Print_data(CDPdata);
 
     // Converting the PMatrices into vector<vector<int>> to make matrix of column permutations
 
