@@ -12,13 +12,19 @@ using namespace std;
 
 int NumOfParticles = 0; // number of particles is a global variable!
 typedef vector<vector<complex<double>>> Coeffs;
-typedef vector<vector<int>> ZVecs;
-typedef pair<int , int> Diag; // A diagonal matrix is specified by two numbers z and k!
-typedef vector<vector<vector<Diag>>> DVecs;
-typedef pair<vector<int> , pair<vector<Diag> , vector<complex<double>>>> PauliCDPs; // This typedef is to summarize the Paulis as sum of DPs (with corresponding coefficients);
+typedef vector<vector<int>> ParticlePerm;
+typedef vector<vector<pair<int,int>>> TotalPerms;
+typedef pair<int,int> ParticleDiag;
+struct TotalDiag {
+    int ztype , k , particle;
+};
+
+typedef vector<vector<vector<ParticleDiag>>> ParticleDVecs;
+typedef vector<vector<vector<TotalDiag>>> TotalDVecs;
+typedef pair<vector<int> , pair<vector<ParticleDiag> , vector<complex<double>>>> PauliCDPs; // This typedef is to summarize the Paulis as sum of DPs (with corresponding coefficients);
 struct PDdata {
-    vector<vector<pair<int, int>>> Permutations;
-    DVecs Diagonals;
+    TotalPerms Permutations;
+    TotalDVecs Diagonals;
     Coeffs Coefficients;
 };
 
@@ -35,15 +41,15 @@ void printMatrix(const vector<vector<T>>& matrix) {
     }
 }
 
-void Print_diagonals(vector<vector<Diag>> Diags , vector<complex<double>> Cs){
+void Print_diagonals(vector<vector<TotalDiag>> Diags , vector<complex<double>> Cs){
     for(int j = 0; j < Diags.size(); j++){
         cout <<  Cs[j];
         for(int k = 0; k < Diags[j].size() ; k++){
-            if(Diags[j][k].first == 1){
-                cout << " D(z," << Diags[j][k].second << ")";
+            if(Diags[j][k].ztype == 1){
+                cout << " D(z," << Diags[j][k].k << "," << "spin " << Diags[j][k].particle << ")";
             }
             else{
-                cout << " D(" << Diags[j][k].second << ")";
+                cout << " D(" << Diags[j][k].k << "," << "spin " << Diags[j][k].particle << ")";
             }
         }
         if(j < Diags.size()-1){
@@ -58,8 +64,8 @@ void Print_diagonals(vector<vector<Diag>> Diags , vector<complex<double>> Cs){
 
 void Print_data(PDdata CDPdata){
     Coeffs C = CDPdata.Coefficients;
-    DVecs D = CDPdata.Diagonals;
-    vector<vector<pair<int,int>>> P = CDPdata.Permutations;
+    TotalDVecs D = CDPdata.Diagonals;
+    TotalPerms P = CDPdata.Permutations;
 
     for(int i = 0; i < P.size() ; i++){
         cout << "The permutation is ";
@@ -69,12 +75,12 @@ void Print_data(PDdata CDPdata){
         cout << endl;
         for(int j = 0; j < D[i].size(); j++){
             cout <<  C[i][j];
-            for(int k = 0; k < D[i][j].size() ; k++){
-                if(D[i][j][k].first == 1){
-                    cout << " D(z," << D[i][j][k].second << ")";
+            for(int l = 0; l < D[i][j].size() ; l++){
+                if(D[i][j][l].ztype == 1){
+                    cout << " D(z," << D[i][j][l].k << "," << "spin # " << D[i][j][l].particle <<")";
                 }
                 else{
-                    cout << " D(" << D[i][j][k].second << ")";
+                    cout << " D(" << D[i][j][l].k << "," << "spin # " << D[i][j][l].particle << ")";
                 }
             }
             if(j < D[i].size()-1){
@@ -140,29 +146,29 @@ pair<bool , int> Find_number(int Num , vector<int> NumVec){
     return {false , 0};
 }
 
-void Permutation_append(vector<int>& AllPermsOnParticle , vector<vector<vector<Diag>>>& AllDiagsOnParticle , vector<vector<complex<double>>>& AllCoeffsOnParticle , PauliCDPs CurrentPnDnCs , int twosp1){
+void Permutation_append(vector<int>& AllPermsOnParticle , ParticleDVecs& AllDiagsOnParticle , Coeffs& AllCoeffsOnParticle , PauliCDPs CurrentPnDnCs , int twosp1){
     vector<int> CurrentPs = CurrentPnDnCs.first;
-    vector<Diag> CurrentDs = CurrentPnDnCs.second.first;
+    vector<ParticleDiag> CurrentDs = CurrentPnDnCs.second.first;
     vector<complex<double>> CurrentCs = CurrentPnDnCs.second.second;
 
     // We have to go through AllPermsOnParticle and generate a new term by adding the c
     vector<int> AllPInit = AllPermsOnParticle;
     AllPermsOnParticle.clear();
-    vector<vector<vector<Diag>>> AllDInit = AllDiagsOnParticle;
+    ParticleDVecs AllDInit = AllDiagsOnParticle;
     AllDiagsOnParticle.clear();
-    vector<vector<complex<double>>> AllCoes = AllCoeffsOnParticle;
+    Coeffs AllCoes = AllCoeffsOnParticle;
     AllCoeffsOnParticle.clear();
 
     // Initializing the diagonal element to be moved to the left of the existing permutations
-    Diag CurrDj = {CurrentDs[0].first , 0};
+    ParticleDiag CurrDj;
+    CurrDj = {CurrentDs[0].first , 0};
 
     for(int j=0; j < CurrentPs.size(); j++){
         vector<int> AllP2 = AllPInit;
-        vector<vector<vector<Diag>>> AllDiags2 = AllDInit;
-        vector<vector<complex<double>>> AllCoes2 = AllCoes;
+        ParticleDVecs AllDiags2 = AllDInit;
+        Coeffs AllCoes2 = AllCoes;
         for(int i=0; i < AllPInit.size(); i++){
             AllP2[i] = (AllP2[i] + CurrentPs[j]) % twosp1;
-
             CurrDj.second = (CurrentDs[j].second + AllPInit[i]) % twosp1; // Moving the new D matrix to the right of the existing permutation matrices!
             // Adding the new D matrix to the list of the existing D matrices!
             for(int k = 0; k < AllDiags2[i].size() ; k++){
@@ -215,8 +221,8 @@ vector<vector<T>> Concat_two(vector<vector<T>> A , vector<vector<T>> B){
     return output;
 }
 
-void Diag_Multiply(vector<vector<Diag>>& ExistingDiags , vector<complex<double>>& ExistingCoeffs , vector<vector<Diag>> NewDiags , vector<complex<double>> NewCoeffs){
-    vector<vector<Diag>> ExistingDiags0 = ExistingDiags;
+void Diag_Multiply(vector<vector<TotalDiag>>& ExistingDiags , vector<complex<double>>& ExistingCoeffs , vector<vector<TotalDiag>> NewDiags , vector<complex<double>> NewCoeffs){
+    vector<vector<TotalDiag>> ExistingDiags0 = ExistingDiags;
     vector<complex<double>> ExistingCoeffs0 = ExistingCoeffs;
     int NumExisting = ExistingDiags.size() , NumNew = NewDiags.size(); 
     ExistingDiags.clear();
@@ -229,9 +235,26 @@ void Diag_Multiply(vector<vector<Diag>>& ExistingDiags , vector<complex<double>>
     }
 }
 
-void PMR_otimes(vector<vector<pair<int,int>>>& PermutationSet , DVecs& DiagonalSet , Coeffs& CoeffSet , vector<int> NewPermutations , DVecs NewDiagonals, Coeffs NewCoeffs, int NewParticleNo , int twoSplusOne){
-    vector<vector<pair<int, int>>> PermutationSet0 = PermutationSet;
-    DVecs DiagonalSet0 = DiagonalSet;
+// This function converts the string of diagonals on a single particle into a string of total diagonals with the particle number appended
+vector<vector<TotalDiag>> Diag_convert(vector<vector<ParticleDiag>> D , int ParticleNo){
+    vector<vector<TotalDiag>> TotalDs;
+    for(int i = 0; i < D.size(); i++){
+        vector<TotalDiag> TotalDsi;
+        for(int j = 0; j < D[i].size(); j++){
+            TotalDiag TotalDsij;
+            TotalDsij.ztype = D[i][j].first;
+            TotalDsij.k = D[i][j].second;
+            TotalDsij.particle = ParticleNo;
+            TotalDsi.push_back(TotalDsij);
+        }
+        TotalDs.push_back(TotalDsi);
+    }
+    return TotalDs;
+}
+
+void PMR_otimes(TotalPerms& PermutationSet , TotalDVecs& DiagonalSet , Coeffs& CoeffSet , vector<int> NewPermutations , ParticleDVecs NewDiagonals, Coeffs NewCoeffs, int NewParticleNo , int twoSplusOne){
+    TotalPerms PermutationSet0 = PermutationSet;
+    TotalDVecs DiagonalSet0 = DiagonalSet;
     Coeffs CoeffSet0 = CoeffSet;
     int len = PermutationSet.size();
     PermutationSet.clear();
@@ -239,13 +262,14 @@ void PMR_otimes(vector<vector<pair<int,int>>>& PermutationSet , DVecs& DiagonalS
     CoeffSet.clear();
 
     for(int j=0; j < NewPermutations.size(); j++){
-        vector<vector<pair<int, int>>> PermutationSetj = PermutationSet0;
-        DVecs DiagonalSetj = DiagonalSet0;
+        TotalPerms PermutationSetj = PermutationSet0;
+        TotalDVecs DiagonalSetj = DiagonalSet0;
         Coeffs CoeffSetj = CoeffSet0;
         for(int k=0; k < len; k++){
-            // Maybe: Check for uniqueness here OR do it during the concatenation of two consecutive lines!
             PermutationSetj[k].push_back({NewParticleNo , NewPermutations[j]}); // Here, we are multiplying the permutation matrices
-            Diag_Multiply(DiagonalSetj[k] , CoeffSetj[k] , NewDiagonals[j] , NewCoeffs[j]); // Here, we are multiplying the diagonal matrices with corresponding coefficients!
+            // Convert individual diagonal to total diagonal:
+            vector<vector<TotalDiag>> NewDj = Diag_convert(NewDiagonals[j] , NewParticleNo); 
+            Diag_Multiply(DiagonalSetj[k] , CoeffSetj[k] , NewDj , NewCoeffs[j]); // Here, we are multiplying the diagonal matrices with corresponding coefficients!
         }
         PermutationSet.insert(PermutationSet.end() , PermutationSetj.begin() , PermutationSetj.end());
         DiagonalSet.insert(DiagonalSet.end() , DiagonalSetj.begin() , DiagonalSetj.end());
@@ -255,9 +279,9 @@ void PMR_otimes(vector<vector<pair<int,int>>>& PermutationSet , DVecs& DiagonalS
 
 bool Perm_compare(vector<pair<int,int>> A , vector<pair<int,int>> B){
     if(A.size() != B.size())
-        cerr << "The sizes of the two input vectors are not equal! Comparison failed." << endl;
+        return false;
     for(int i = 0; i < A.size(); i++){
-        if(A[i] != B[i]){
+        if(A[i]!= B[i]){
             return false;
         }
     }
@@ -273,8 +297,8 @@ pair<bool , int> Find_permutation(vector<pair<int,int>> LinePerms , vector<vecto
     return {0,0};
 }
 void PMR_append(PDdata& pdData, PDdata pdDataLine){
-    vector<vector<pair<int,int>>> AllPerms = pdData.Permutations , LinePerms = pdDataLine.Permutations;
-    DVecs AllDiags = pdData.Diagonals , LineDiags = pdDataLine.Diagonals;
+    TotalPerms AllPerms = pdData.Permutations , LinePerms = pdDataLine.Permutations;
+    TotalDVecs AllDiags = pdData.Diagonals , LineDiags = pdDataLine.Diagonals;
     Coeffs AllCoes = pdData.Coefficients , LineCoes = pdDataLine.Coefficients;
 
     for(int i=0; i < LinePerms.size(); i++){
@@ -301,7 +325,7 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
 
     // Definining the diagonal matrices and their complex coefficients
     complex<double> one(1,0) , plusi(0,1) , minusi(0,1);
-    Diag Dplus = {0 , 0} , Dminus = {0 , -1} , Dz = {1 , 0};
+    ParticleDiag Dplus = {0 , 0} , Dminus = {0 , -1} , Dz = {1 , 0};
 
     // Defining the diagonal matrices with the pair convection. If the first integer is zero, we have D^{(k)}, and if the
     //      first integer is one, we have D^{(z,k)}. The second integer specifies k!
@@ -310,11 +334,11 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
         vector<int> datal = data[l].second; // Extracts the array of spins and paulis for every line of input!
         vector<int> ParticlNos;
         vector<vector<int>> Permsl; // This is a vector (for each particle number) of (vector<int> The set of permutations acting on that particle)
-        vector<DVecs> Diagsl; // The first vector is for each particle, the second vector is for the set of permutations, and the third vector is for the set of diagonal vectors for the specified permutation
+        vector<ParticleDVecs> Diagsl; // The first vector is for each particle, the second vector is for the set of permutations, and the third vector is for the set of diagonal vectors for the specified permutation
         vector<Coeffs> Coeffsl; // Since we can get multiple permutation matrices per line of data, we need to keep track of the coefficients for each 
 
-        vector<vector<pair<int , int>>> PMatricesLine;  // The first in the pair is the set of particle numbers and the second vector is the set of powers of permutations
-        DVecs DMatricesLine; //This vector maps the Zs to Ps it is a many to one mapping!
+        TotalPerms PMatricesLine;  // The first in the pair is the set of particle numbers and the second vector is the set of powers of permutations
+        TotalDVecs DMatricesLine; //This vector maps the Zs to Ps it is a many to one mapping!
         Coeffs CsLine;
         PDdata pdDataLine;
 
@@ -342,7 +366,7 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
             else{
                 ParticlNos.push_back(Particlei);
                 Permsl.push_back(Operator.first);
-                DVecs NewD;
+                ParticleDVecs NewD;
                 Coeffs NewC;
                 for(int p = 0; p < Operator.second.first.size() ; p++){
                     NewD.push_back({{Operator.second.first[p]}});
@@ -361,7 +385,7 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
             if(k == 0){
                 for(int kk = 0; kk < Permsl[k].size(); kk++){
                     PMatricesLine.push_back({{ParticlNos[k] , Permsl[k][kk]}});
-                    DMatricesLine.push_back(Diagsl[k][kk]);
+                    DMatricesLine.push_back(Diag_convert(Diagsl[k][kk] , ParticlNos[k]));
                     CsLine.push_back(Coeffsl[k][kk]);
                 }
             }
@@ -407,7 +431,7 @@ int main(int argc , char* argv[]){
     cout << endl;
     PDdata CDPdata = CDPconvert(data);
     Coeffs Cs = CDPdata.Coefficients;
-    DVecs DMatrices = CDPdata.Diagonals;
+    TotalDVecs DMatrices = CDPdata.Diagonals;
     vector< vector<pair<int,int>>> PMatrices = CDPdata.Permutations;
 
     cout << "The following is the breakdown of the data " << endl;
