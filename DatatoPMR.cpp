@@ -26,6 +26,8 @@ struct PDdata {
     TotalPerms Permutations;
     TotalDVecs Diagonals;
     Coeffs Coefficients;
+    vector<vector<TotalDiag>> D0;
+    vector<complex<double>> D0Coeffs;
 };
 
 template<typename T>
@@ -66,6 +68,32 @@ void Print_data(PDdata CDPdata){
     Coeffs C = CDPdata.Coefficients;
     TotalDVecs D = CDPdata.Diagonals;
     TotalPerms P = CDPdata.Permutations;
+    vector<vector<TotalDiag>> D0 = CDPdata.D0;
+    vector<complex<double>> D0Coeffs = CDPdata.D0Coeffs;
+
+    int D0size = D0.size();
+    if(D0size > 0){
+        cout << "The diagonal D0 is " << endl;
+        for(int i = 0; i < D0size; i++){
+            cout << D0Coeffs[i];
+            for(int j = 0; j < D0[i].size(); j++){
+                if(D0[i][j].ztype == 1){
+                    cout <<" D(z," << D0[i][j].k << "," << "spin # " << D0[i][j].particle <<")";
+                }
+                else{
+                    cout << " D(" << D0[i][j].k << "," << "spin # " << D0[i][j].particle << ")";
+                }
+            }
+            if(i < D0size - 1){
+                cout << " + ";
+            }
+        }
+        cout << endl;
+    }
+    else{
+        cout << "There are no purely diagonal terms.." << endl;
+    }
+    cout << endl;
 
     for(int i = 0; i < P.size() ; i++){
         cout << "The permutation is ";
@@ -277,12 +305,24 @@ void PMR_otimes(TotalPerms& PermutationSet , TotalDVecs& DiagonalSet , Coeffs& C
     }
 } 
 
+// This function checks whether the permutation vector A is identity
+bool Is_identity(vector<pair<int,int>> A){
+    for(int i=0; i < A.size(); i++){
+        if(A[i].second != 0){
+            return false;
+        }
+    }
+    return true;
+}
+
 bool Perm_compare(vector<pair<int,int>> A , vector<pair<int,int>> B){
     if(A.size() != B.size())
         return false;
-    for(int i = 0; i < A.size(); i++){
-        if(A[i]!= B[i]){
-            return false;
+    else{
+        for(int i = 0; i < A.size(); i++){
+            if(A[i]!= B[i]){
+                return false;
+            }
         }
     }
     return true;
@@ -296,10 +336,13 @@ pair<bool , int> Find_permutation(vector<pair<int,int>> LinePerms , vector<vecto
     }
     return {0,0};
 }
+
 void PMR_append(PDdata& pdData, PDdata pdDataLine){
     TotalPerms AllPerms = pdData.Permutations , LinePerms = pdDataLine.Permutations;
     TotalDVecs AllDiags = pdData.Diagonals , LineDiags = pdDataLine.Diagonals;
     Coeffs AllCoes = pdData.Coefficients , LineCoes = pdDataLine.Coefficients;
+    vector<vector<TotalDiag>> D0 = pdData.D0 , D0Line = pdDataLine.D0;
+    vector<complex<double>> D0Coeffs = pdData.D0Coeffs , D0CoeffsLine = pdDataLine.D0Coeffs;
 
     for(int i=0; i < LinePerms.size(); i++){
         pair<bool , int> PermFound = Find_permutation(LinePerms[i] , AllPerms);
@@ -313,9 +356,17 @@ void PMR_append(PDdata& pdData, PDdata pdDataLine){
             AllCoes.push_back(LineCoes[i]);
         }
     }
+
+    for(int i=0; i < D0Line.size();i++){
+        D0.push_back(D0Line[i]);
+        D0Coeffs.push_back(D0CoeffsLine[i]);
+    }
+
     pdData.Permutations = AllPerms;
     pdData.Coefficients = AllCoes;
     pdData.Diagonals = AllDiags;
+    pdData.D0 = D0;
+    pdData.D0Coeffs = D0Coeffs;
 }
 
 PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
@@ -340,6 +391,8 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
         TotalPerms PMatricesLine;  // The first in the pair is the set of particle numbers and the second vector is the set of powers of permutations
         TotalDVecs DMatricesLine; //This vector maps the Zs to Ps it is a many to one mapping!
         Coeffs CsLine;
+        vector<vector<TotalDiag>> D0Line;
+        vector<complex<double>> D0CoeffsLine;
         PDdata pdDataLine;
 
         int twoSpinplus1l; 
@@ -400,10 +453,24 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
             }
         }
 
+        // Removing the identity permutation and extracting D0 and D0Coeffs
+        for(int i = 0; i < PMatricesLine.size(); i++){
+            if(Is_identity(PMatricesLine[i])){
+                D0Line = DMatricesLine[i];
+                D0CoeffsLine = CsLine[i];
+                PMatricesLine.erase(PMatricesLine.begin() + i);
+                DMatricesLine.erase(DMatricesLine.begin() + i);
+                CsLine.erase(CsLine.begin() + i);
+            }
+        }
+
         // Adding the new CDP from the line to the entire set of total CDPs
         pdDataLine.Coefficients = CsLine;
         pdDataLine.Permutations = PMatricesLine;
         pdDataLine.Diagonals = DMatricesLine;
+        pdDataLine.D0 = D0Line;
+        pdDataLine.D0Coeffs = D0CoeffsLine;
+
 
         PMR_append(pdData, pdDataLine);
     }
@@ -435,6 +502,7 @@ int main(int argc , char* argv[]){
     vector< vector<pair<int,int>>> PMatrices = CDPdata.Permutations;
 
     cout << "The following is the breakdown of the data " << endl;
+    cout << endl;
     Print_data(CDPdata);
 
     // Converting the PMatrices into vector<vector<int>> to make matrix of column permutations
