@@ -520,9 +520,7 @@ int main(int argc , char* argv[]){
 
     // Converting the PMatrices into vector<vector<int>> to make matrix of column permutations
 
-    cout << "Testing Convert Perms: " << endl;
-    vector<vector<pair<int,int>>> EmptyPerms;
-    vector<vector<int>> PermMatrixColumn = Convert_perms(EmptyPerms, N);
+    vector<vector<int>> PermMatrixColumn = Convert_perms(PMatrices, N);
     cout << endl;
     printMatrix(PermMatrixColumn);
 
