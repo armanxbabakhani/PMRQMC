@@ -10,7 +10,6 @@
 
 using namespace std;
 
-int NumOfParticles = 0; // number of particles is a global variable!
 typedef vector<vector<complex<double>>> Coeffs;
 typedef vector<vector<int>> ParticlePerm;
 typedef vector<vector<pair<int,int>>> TotalPerms;
@@ -22,7 +21,7 @@ typedef vector<vector<vector<ParticleDiag>>> ParticleDVecs;
 typedef vector<vector<vector<TotalDiag>>> TotalDVecs;
 typedef pair<vector<int> , pair<vector<ParticleDiag> , vector<complex<double>>>> PauliCDPs; // This typedef is to summarize the Paulis as sum of DPs (with corresponding coefficients);
 struct PDdata {
-    int twoSplusOne;
+    int twoSplusOne , NumOfParticles;
     TotalPerms Permutations;
     TotalDVecs Diagonals;
     Coeffs Coefficients;
@@ -379,9 +378,9 @@ void PMR_append(PDdata& pdData, PDdata pdDataLine){
     pdData.D0Coeffs = D0Coeffs;
 }
 
-PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
+PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data){
     int NumLines = data.size() , twoSplusOne;
-    extern int NumOfParticles;
+    int NumOfParticles = 0;
     PDdata pdData;
 
     // Definining the diagonal matrices and their complex coefficients
@@ -487,12 +486,12 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
     }
 
     pdData.twoSplusOne = twoSplusOne;
+    pdData.NumOfParticles = NumOfParticles;
 
     return pdData;
 }
 
-vector<vector<int>> Convert_perms(vector<vector<pair<int,int>>> PMatrices){
-    extern int NumOfParticles;
+vector<vector<int>> Convert_perms(vector<vector<pair<int,int>>> PMatrices , int NumOfParticles){
     vector<vector<int>> ColPermMatrix(NumOfParticles , vector<int>(PMatrices.size() , 0));
     for(int i=0; i< PMatrices.size(); i++){
         for(int j = 0; j < PMatrices[i].size(); j++){
@@ -513,6 +512,7 @@ int main(int argc , char* argv[]){
     Coeffs Cs = CDPdata.Coefficients;
     TotalDVecs DMatrices = CDPdata.Diagonals;
     vector< vector<pair<int,int>>> PMatrices = CDPdata.Permutations;
+    int N = CDPdata.NumOfParticles;
 
     cout << "The following is the breakdown of the data " << endl;
     cout << endl;
@@ -520,9 +520,12 @@ int main(int argc , char* argv[]){
 
     // Converting the PMatrices into vector<vector<int>> to make matrix of column permutations
 
-    vector<vector<int>> PermMatrixColumn = Convert_perms(PMatrices);
+    cout << "Testing Convert Perms: " << endl;
+    vector<vector<pair<int,int>>> EmptyPerms;
+    vector<vector<int>> PermMatrixColumn = Convert_perms(EmptyPerms, N);
     cout << endl;
     printMatrix(PermMatrixColumn);
+
 
     return 0;
 }

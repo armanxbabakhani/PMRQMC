@@ -13,10 +13,8 @@ using namespace std;
 template<typename T>
 void Print_matrix(const vector<vector<T>>& matrix) {
     int m = matrix.size();
-    int n = matrix[0].size();
-
     for (int i = 0; i < m; i++) {
-        for (int j = 0; j < n; j++) {
+        for (int j = 0; j < matrix[i].size(); j++) {
             cout << matrix[i][j] << " ";
         }
         cout << endl;
@@ -415,14 +413,14 @@ vector<vector<int>> Nullspace_n(const vector<vector<int>> A , int n){
     vector<pair<int, int>> ps = Prime_decomp(n);
     vector<vector<int>> Null;
 
-    for(int i=0 ; i < ps.size() ; i++){
-        int prime = ps[i].first , power = ps[i].second;
-        cout << "The prime number is " << prime << " with power " << power << endl;
-        vector<vector<int>> Nullspacei = Modp_Nullspace_r(A , prime , power);
-        Nullspacei = Modp_scalmult(n/pow(prime , power) , Nullspacei , n);
-        Null = Horz_conc(Null , Nullspacei);
+    if(A.size() > 0){
+        for(int i=0 ; i < ps.size() ; i++){
+            int prime = ps[i].first , power = ps[i].second;
+            vector<vector<int>> Nullspacei = Modp_Nullspace_r(A , prime , power);
+            Nullspacei = Modp_scalmult(n/pow(prime , power) , Nullspacei , n);
+            Null = Horz_conc(Null , Nullspacei);
+        }
     }
-
     return Null;
 }
 
@@ -441,7 +439,8 @@ int main(){
     Print_matrix(Arr);
 
     cout << endl;
-    vector<vector<int>> x = Nullspace_n(A , p);
+    vector<vector<int>> EmptyMat;
+    vector<vector<int>> x = Nullspace_n(EmptyMat , p);
     cout << "The nullspace basis of A " << endl;
     Print_matrix(x);
 
