@@ -18,11 +18,11 @@ typedef pair<int,int> ParticleDiag;
 struct TotalDiag {
     int ztype , k , particle;
 };
-
 typedef vector<vector<vector<ParticleDiag>>> ParticleDVecs;
 typedef vector<vector<vector<TotalDiag>>> TotalDVecs;
 typedef pair<vector<int> , pair<vector<ParticleDiag> , vector<complex<double>>>> PauliCDPs; // This typedef is to summarize the Paulis as sum of DPs (with corresponding coefficients);
 struct PDdata {
+    int twoSplusOne;
     TotalPerms Permutations;
     TotalDVecs Diagonals;
     Coeffs Coefficients;
@@ -303,7 +303,17 @@ void PMR_otimes(TotalPerms& PermutationSet , TotalDVecs& DiagonalSet , Coeffs& C
         DiagonalSet.insert(DiagonalSet.end() , DiagonalSetj.begin() , DiagonalSetj.end());
         CoeffSet.insert(CoeffSet.end() , CoeffSetj.begin() , CoeffSetj.end());
     }
-} 
+}
+
+vector<pair<int,int>> Strip_zeros(vector<pair<int,int>> A){
+    vector<pair<int,int>> A_stripped;
+    for(int i=0; i < A.size(); i++){    
+        if(A[i].second != 0){
+            A_stripped.push_back(A[i]);
+        }
+    }
+    return A_stripped;
+}
 
 // This function checks whether the permutation vector A is identity
 bool Is_identity(vector<pair<int,int>> A){
@@ -345,13 +355,13 @@ void PMR_append(PDdata& pdData, PDdata pdDataLine){
     vector<complex<double>> D0Coeffs = pdData.D0Coeffs , D0CoeffsLine = pdDataLine.D0Coeffs;
 
     for(int i=0; i < LinePerms.size(); i++){
-        pair<bool , int> PermFound = Find_permutation(LinePerms[i] , AllPerms);
+        pair<bool , int> PermFound = Find_permutation(Strip_zeros(LinePerms[i]) , AllPerms);
         if(PermFound.first){
             AllDiags[PermFound.second].insert(AllDiags[PermFound.second].end() , LineDiags[i].begin() , LineDiags[i].end());
             AllCoes[PermFound.second].insert(AllCoes[PermFound.second].end() , LineCoes[i].begin() , LineCoes[i].end());
         }
         else{
-            AllPerms.push_back(LinePerms[i]);
+            AllPerms.push_back(Strip_zeros(LinePerms[i]));
             AllDiags.push_back(LineDiags[i]);
             AllCoes.push_back(LineCoes[i]);
         }
@@ -370,7 +380,7 @@ void PMR_append(PDdata& pdData, PDdata pdDataLine){
 }
 
 PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
-    int NumLines = data.size();
+    int NumLines = data.size() , twoSplusOne;
     extern int NumOfParticles;
     PDdata pdData;
 
@@ -433,6 +443,7 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
                 }
             }
         }
+        twoSplusOne = twoSpinplus1l;
         // Combining all the P and D matrices from a single line into corresponding PRM forms (there could be multiple PMR terms from each line)
         for(int k = 0; k < Permsl.size(); k++){
             if(k == 0){
@@ -474,6 +485,8 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data) {
 
         PMR_append(pdData, pdDataLine);
     }
+
+    pdData.twoSplusOne = twoSplusOne;
 
     return pdData;
 }
