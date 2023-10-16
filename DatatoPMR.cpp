@@ -384,7 +384,7 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data){
     PDdata pdData;
 
     // Definining the diagonal matrices and their complex coefficients
-    complex<double> one(1,0) , plusi(0,1) , minusi(0,1);
+    complex<double> one(1,0) , plusi(0,1) , minusi(0,-1);
     ParticleDiag Dplus = {0 , 0} , Dminus = {0 , -1} , Dz = {1 , 0};
 
     // Defining the diagonal matrices with the pair convection. If the first integer is zero, we have D^{(k)}, and if the
@@ -431,7 +431,9 @@ PDdata CDPconvert(const vector<pair<complex<double>,vector<int>>> data){
                 ParticleDVecs NewD;
                 Coeffs NewC;
                 for(int p = 0; p < Operator.second.first.size() ; p++){
-                    NewD.push_back({{Operator.second.first[p]}});
+                    ParticleDiag NewDp = Operator.second.first[p];
+                    NewDp.second = (NewDp.second + twoSpinplus1l) % twoSpinplus1l; // Replacing k = -1 with k = 2S 
+                    NewD.push_back({{NewDp}});
                     NewC.push_back({{Operator.second.second[p]}}); // This takes care of the front coefficient multiplication!
                 }
                 Diagsl.push_back(NewD);

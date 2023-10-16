@@ -23,7 +23,11 @@ void Print_matrix(const vector<vector<T>>& matrix) {
 
 // This function mod p multiplies the matrix A by a scalar c!
 vector<vector<int>> Modp_scalmult(const int c , const vector<vector<int>> A , int p){
-    int rowsA = A.size() , colsA = A[0].size();
+    int rowsA = A.size();
+    if(rowsA == 0){
+        return A;
+    }
+    int colsA = A[0].size();
     vector<vector<int>> cA(rowsA , vector<int> (colsA , 0));
     for(int i = 0; i < rowsA ; i++){
         for(int j = 0; j < colsA ; j++){
@@ -76,15 +80,21 @@ int Modp_divide(int num , int divider , int p){
 // This function transposes matrix A
 vector<vector<int>> Transpose(vector<vector<int>> A){
     vector<vector<int>> A_transpose;
-    int rowsA = A.size(), colsA = A[0].size();
-    for(int j=0; j < colsA ; j++){
-        vector<int> A_transpose_j(rowsA , 0);
-        for(int i = 0; i < rowsA ; i++){
-            A_transpose_j[i] = A[i][j];
-        }
-        A_transpose.push_back(A_transpose_j);
+    int rowsA = A.size();
+    if(rowsA == 0){
+        return A_transpose;
     }
-    return A_transpose;
+    else{
+        int colsA = A[0].size();
+        for(int j=0; j < colsA ; j++){
+            vector<int> A_transpose_j(rowsA , 0);
+            for(int i = 0; i < rowsA ; i++){
+                A_transpose_j[i] = A[i][j];
+            }
+            A_transpose.push_back(A_transpose_j);
+        }
+        return A_transpose;
+    }
 }
 
 // Divide_vector divides the given matrix in 2 vertically!
@@ -427,7 +437,9 @@ vector<vector<int>> Nullspace_n(const vector<vector<int>> A , int n){
 int main(){
     // Testing Nullspace finder!
     vector<vector<int>> A = Transpose({{1 , 2 , 1} , {2 , 1 , 0} , {0 , 2  , 1} , {1 , 0 , 1}}), Arr;
-    
+    vector<vector<int>> Iden = Transpose({{1 , 0 , 0 , 0} , {0 , 1 , 0 , 0} , {0 , 0  , 1 , 0} , {0 , 0 , 0 , 1}});
+    vector<vector<int>> Empty = Transpose({{}});
+
     Arr = A;
     int p = 7;
     Modp_GE(Arr , p); // Gaussian Elimination performed on A!
@@ -439,8 +451,10 @@ int main(){
     Print_matrix(Arr);
 
     cout << endl;
-    vector<vector<int>> EmptyMat;
-    vector<vector<int>> x = Nullspace_n(EmptyMat , p);
+
+    cout << "The nullspace calculation is starting:" << endl;
+    vector<vector<int>> x = Nullspace_n(A , p);
+    cout << endl;
     cout << "The nullspace basis of A " << endl;
     Print_matrix(x);
 
